@@ -1,0 +1,13 @@
+name = "VPTree"
+uuid = "3f758e00-7cb9-11e9-3b4c-155e9e1e2c5c"
+authors = ["Alan Schelten"]
+version = "0.1.0"
+
+[compat]
+julia = "1.1.1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
