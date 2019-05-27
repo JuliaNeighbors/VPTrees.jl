@@ -1,4 +1,4 @@
-module VantagePointTree
+module VPTrees
 
 include("vantage_point_tree.jl")
 

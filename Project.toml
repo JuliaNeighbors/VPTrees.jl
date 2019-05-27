@@ -1,5 +1,5 @@
-name = "VantagePointTree"
-uuid = "cad2d2c0-01d1-5112-9b09-8a3f5411dd30"
+name = "VPTrees"
+uuid = "6889b67b-453b-53df-8fa8-6efd51eae556"
 authors = ["Alan Schelten"]
 version = "0.1.0"
 

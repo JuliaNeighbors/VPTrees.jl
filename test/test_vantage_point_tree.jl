@@ -1,5 +1,5 @@
 using Test
-using VantagePointTree
+using VPTrees
 
 @testset "VPTree.jl" begin
     data = [UInt(1), UInt(15)]
