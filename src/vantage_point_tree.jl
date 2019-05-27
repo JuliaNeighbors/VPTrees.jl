@@ -1,9 +1,23 @@
+import Base.show
+
 struct Node{T}
     index::Int
     data::T
     radius::Int
     left_child::Union{Node{T}, Nothing}
     right_child::Union{Node{T}, Nothing}
+end
+
+function Base.show(io::IO, n::Node)
+    print("Node $(typeof(n).parameters[1]), radius $(n.radius), depth $(_depth(n))")
+end
+
+function _depth(n)
+    if n == nothing 
+        0
+    else
+        1 + max(_depth(n.left_child), _depth(n.right_child))
+    end
 end
 
 """
@@ -18,7 +32,6 @@ struct VPTree{T}
     root::Node{T}
     #TODO: copy 
     #TODO: randomize
-    #TODO: need data?
     #TODO: trick for metric return type?
     function  VPTree(data::Vector{T}, metric) where T
         data = collect(enumerate(data))
