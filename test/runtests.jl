@@ -1,6 +1,2 @@
-using VPTree
-using Test
-
-@testset "VPTree.jl" begin
-    # Write your own tests here.
-end
+using VantagePointTree
+include("test_vantage_point_tree.jl")
