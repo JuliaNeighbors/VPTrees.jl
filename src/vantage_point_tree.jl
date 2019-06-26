@@ -1,14 +1,14 @@
 import Base.show
 import DataStructures
 
-struct Node{T}
+struct Node{InputType, MetricReturnType}
     index::Int
-    data::T
-    radius::Int
-    min_dist::Int
-    max_dist::Int
-    left_child::Union{Node{T}, Nothing}
-    right_child::Union{Node{T}, Nothing}
+    data::InputType
+    radius::MetricReturnType
+    min_dist::MetricReturnType
+    max_dist::MetricReturnType
+    left_child::Union{Node{InputType, MetricReturnType}, Nothing}
+    right_child::Union{Node{InputType, MetricReturnType}, Nothing}
 end
 
 function Base.show(io::IO, n::Node)
@@ -24,31 +24,31 @@ function _depth(n)
 end
 
 """
-    Construct Vantage Point Tree with data type `T` and given metric.
+    Construct Vantage Point Tree with data type `InputType` and given metric with return type `MetricReturnType`.
 
     # Arguments
     - `data:: Vector{T}`: The data to be stored in the Tree
-    - `metric:: Function`: A metric taking to parameters of type T and returning a distance with type `Float64`.
+    - `metric:: Function`: A metric taking to parameters of type T and returning a distance with type `metricReturnType`.
+    - `metricReturnType:: DataType`: Return type of `metric`.
 """
-struct VPTree{T}
+struct VPTree{InputType, MetricReturnType}
     metric::Function
-    root::Node{T}
-    #TODO: trick for metric return type?
-    function  VPTree(data::Vector{T}, metric) where T
+    root::Node{InputType, MetricReturnType}
+    MetricReturnType::DataType
+    function VPTree(data::Vector{InputType}, metric::Function, MetricReturnType) where {InputType}
         data = collect(enumerate(data))
-        root = _construct_tree_rec!(data, metric)
-        new{T}(metric, root)
+        root = _construct_tree_rec!(data, metric, MetricReturnType)
+        new{InputType, MetricReturnType}(metric, root, MetricReturnType)
     end
 end
 
-
-function _construct_tree_rec!(data, metric)
+function _construct_tree_rec!(data::Vector{Tuple{Int, InputType}}, metric, MetricReturnType) where InputType
     if isempty(data)
         return nothing
     end
     n_data = length(data)
     if n_data == 1
-        return Node(data[1][1], data[1][2], 0, 0, 0, nothing, nothing)
+        return Node(data[1][1], data[1][2], zero(MetricReturnType), zero(MetricReturnType), zero(MetricReturnType), nothing, nothing)
     end
     i_vantage = rand(1:n_data)
     rest = data[1:end .!= i_vantage]
@@ -58,11 +58,11 @@ function _construct_tree_rec!(data, metric)
     distances = [metric(d[2], vantage_point[2]) for d in rest]
     select!(rest, i_middle, distances)
     left_rest = rest[1:i_middle]
-    left_node = _construct_tree_rec!(left_rest, metric)
+    left_node = _construct_tree_rec!(left_rest, metric, MetricReturnType)
     right_rest = rest[i_middle + 1:end]
-    right_node = _construct_tree_rec!(right_rest, metric)
+    right_node = _construct_tree_rec!(right_rest, metric, MetricReturnType)
     min_dist, max_dist = extrema(distances)
-    Node(vantage_point[1], vantage_point[2], radius,  min_dist, max_dist, left_node, right_node)
+    Node{InputType, MetricReturnType}(vantage_point[1], vantage_point[2], radius,  min_dist, max_dist, left_node, right_node)
 end
 
 """
@@ -78,7 +78,7 @@ end
     # Returns
     `Vector{Int}`: Indices into VPTree.data.
 """
-function find(vptree::VPTree{T}, query::T, radius) where T
+function find(vptree::VPTree{InputType, MetricReturnType}, query::InputType, radius::MetricReturnType) where {InputType, MetricReturnType}
     results = Vector{Int}()
     _find(vptree.root, query, radius, results, vptree.metric)
     results
@@ -121,7 +121,7 @@ function _find_nearest(vantage_point, query, n_neighbors, candidates, metric)
     end
 end
 
-function select!(a::AbstractVector, k::Integer, distances::Vector{Int})
+function select!(a::AbstractVector, k::Integer, distances)
     lo = 1
     hi = length(a)
     if k < lo || k > hi; error("k is out of bounds"); end

@@ -1,25 +1,27 @@
 using BenchmarkTools
 using Random
-using VPTrees
+# using VPTrees
 
 Random.seed!(1)
 randints = [rand(UInt) for _ in 1:10000]
-@benchmark VPTree(randints, hamming)
+@benchmark VPTree(randints, hamming, Int)
 # BenchmarkTools.Trial: 
-#   memory estimate:  35.86 MiB
-#   allocs estimate:  76700
+#   memory estimate:  36.07 MiB
+#   allocs estimate:  83368
 #   --------------
-#   minimum time:     10.176 ms (10.80% GC)
-#   median time:      12.889 ms (25.68% GC)
-#   mean time:        12.748 ms (23.92% GC)
-#   maximum time:     56.511 ms (79.30% GC)
+#   minimum time:     11.573 ms (11.58% GC)
+#   median time:      14.957 ms (30.30% GC)
+#   mean time:        14.883 ms (28.10% GC)
+#   maximum time:     71.537 ms (81.26% GC)
 #   --------------
-#   samples:          392
+#   samples:          336
 #   evals/sample:     1
 randints = [rand(UInt) for _ in 1:40000]
-vptree = VPTree(randints, hamming);
+vptree = VPTree(randints, hamming, Int);
 query = rand(UInt)
-@benchmark find(vptree, query, 20)
+radius = 20
+@benchmark find(vptree, query, radius)
+
 # BenchmarkTools.Trial: 
 #   memory estimate:  2.22 KiB
 #   allocs estimate:  8
