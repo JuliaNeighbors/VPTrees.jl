@@ -33,8 +33,6 @@ end
 struct VPTree{T}
     metric::Function
     root::Node{T}
-    #TODO: copy 
-    #TODO: randomize
     #TODO: trick for metric return type?
     function  VPTree(data::Vector{T}, metric) where T
         data = collect(enumerate(data))
