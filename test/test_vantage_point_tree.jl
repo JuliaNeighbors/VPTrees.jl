@@ -1,6 +1,7 @@
 using Test
 using VPTrees
 using Random
+using StringDistances
 
 @testset "VPTree.jl" begin
     @testset "find in radius" begin
@@ -56,11 +57,21 @@ using Random
         metric = (a, b) -> sqrt(sum((a .- b).^2))
         vptree = VPTree(data, metric, Float64)
         query=(3,3)
-        @test [1] == find(vptree, (3,3), 3.)
+        @test [1] == find(vptree, query, 3.)
         @test Set([1, 2]) == Set(find(vptree, (3,3), 100.))
         data = [2,3,6]
         vptree = VPTree(data, metric, Float64);
         @test Set([d for d in data if (metric(d, 2)) <= 1]) == Set(data[find(vptree, 2, 1.)])
+    end
+
+    @testset "levenshtein distance" begin
+        Random.seed!(1)
+        data = ["bla", "blub", "asdf", ":assd", "ast", "baube"]
+        metric = (a, b) -> evaluate(Levenshtein(),a,b)
+        vptree = VPTree(data, metric, Int)
+        query="blau"
+        @test Set(["bla", "blub"]) == Set(data[find(vptree, query, 2)])
+        @test Set(["bla", "blub", "baube"]) == Set(data[find_nearest(vptree, query, 3)])
     end
 end
 

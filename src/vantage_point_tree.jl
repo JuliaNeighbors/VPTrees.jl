@@ -32,13 +32,14 @@ end
     - `metricReturnType:: DataType`: Return type of `metric`.
 """
 struct VPTree{InputType, MetricReturnType}
+    data::Vector{InputType}
     metric::Function
     root::Node{InputType, MetricReturnType}
     MetricReturnType::DataType
     function VPTree(data::Vector{InputType}, metric::Function, MetricReturnType) where {InputType}
-        data = collect(enumerate(data))
-        root = _construct_tree_rec!(data, metric, MetricReturnType)
-        new{InputType, MetricReturnType}(metric, root, MetricReturnType)
+        indexed_data = collect(enumerate(data))
+        root = _construct_tree_rec!(indexed_data, metric, MetricReturnType)
+        new{InputType, MetricReturnType}(data, metric, root, MetricReturnType)
     end
 end
 
@@ -97,7 +98,14 @@ function _find(vantage_point, query, radius, results, metric)
     end
 end
 
-function find_nearest(vptree::VPTree{T}, query::T, n_neighbors) where T
+"""
+    Find `n_neighbors` items in `vptree` closest to `query` with respect to the metric defined in the VPTree.
+    
+    # Returns
+    `Vector{Int}`: Indices into VPTree.data.
+"""
+function find_nearest(vptree::VPTree{T}, query::T, n_neighbors::Int) where T
+    @assert n_neighbors > 0 "Can't search for fewer than 1 neighbors"
     candidates = DataStructures.BinaryMaxHeap{Tuple{Int,Int}}()
     _find_nearest(vptree.root, query, n_neighbors, candidates, vptree.metric)
     [t[2] for t in candidates.valtree]
