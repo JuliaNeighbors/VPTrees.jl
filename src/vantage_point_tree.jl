@@ -1,4 +1,5 @@
 import Base.show
+import DataStructures
 
 struct Node{T}
     index::Int
@@ -11,7 +12,7 @@ struct Node{T}
 end
 
 function Base.show(io::IO, n::Node)
-    print("Node $(typeof(n).parameters[1]), radius $(n.radius), depth $(_depth(n))")
+    print("Node $(typeof(n).parameters[1]): $(n.data), index $(n.index) radius $(n.radius), depth $(_depth(n))")
 end
 
 function _depth(n)
@@ -55,22 +56,15 @@ function _construct_tree_rec!(data, metric)
     rest = data[1:end .!= i_vantage]
     i_middle = div(n_data - 1, 2) + 1
     vantage_point = data[i_vantage]
-    select!(rest, i_middle, comparer(metric, vantage_point))
     radius = metric(rest[i_middle][2], vantage_point[2])
-    left_rest = rest[1:i_middle - 1]
+    distances = [metric(d[2], vantage_point[2]) for d in rest]
+    select!(rest, i_middle, distances)
+    left_rest = rest[1:i_middle]
     left_node = _construct_tree_rec!(left_rest, metric)
-    right_rest = rest[i_middle:end]
+    right_rest = rest[i_middle + 1:end]
     right_node = _construct_tree_rec!(right_rest, metric)
-    (min_dist, _), (max_dist, _) = extrema(rest)
+    min_dist, max_dist = extrema(distances)
     Node(vantage_point[1], vantage_point[2], radius,  min_dist, max_dist, left_node, right_node)
-end
-
-function comparer(metric, vantage_point)
-    function compare(a, b)
-        dist_a = metric(vantage_point[2], a[2])
-        dist_b = metric(vantage_point[2], b[2])
-        dist_a < dist_b ? -1 : dist_a > dist_b ? 1 : 0
-    end
 end
 
 """
@@ -93,22 +87,43 @@ function find(vptree::VPTree{T}, query::T, radius) where T
 end
 
 function _find(vantage_point, query, radius, results, metric) 
-    if vantage_point == nothing
-        return 
-    end
     distance = metric(vantage_point.data, query)
     if distance <= radius
         push!(results, vantage_point.index)
     end
-    if distance + radius > vantage_point.radius && distance - radius <= vantage_point.max_dist
+    if distance - radius <= vantage_point.radius && vantage_point.left_child != nothing && distance + radius >= vantage_point.min_dist
         _find(vantage_point.left_child, query, radius, results, metric)
     end
-    if distance - radius <= vantage_point.radius && distance + radius >= vantage_point.min_dist
+    if distance + radius > vantage_point.radius && vantage_point.right_child != nothing && distance - radius <= vantage_point.max_dist
         _find(vantage_point.right_child, query, radius, results, metric)
     end
 end
 
-function select!(a::AbstractVector, k::Integer, comp)
+function find_nearest(vptree::VPTree{T}, query::T, n_neighbors) where T
+    candidates = DataStructures.BinaryMaxHeap{Tuple{Int,Int}}()
+    _find_nearest(vptree.root, query, n_neighbors, candidates, vptree.metric)
+    [t[2] for t in candidates.valtree]
+end
+
+function _find_nearest(vantage_point, query, n_neighbors, candidates, metric) 
+    distance = metric(vantage_point.data, query)
+    radius = length(candidates) < n_neighbors ? typemax(Int) : DataStructures.top(candidates)[1]
+    if distance < radius
+        push!(candidates, (distance, vantage_point.index))
+        if length(candidates) > n_neighbors
+            pop!(candidates)
+        end
+    end
+    # Switch radius to one side to prevent overflow.
+    if distance - vantage_point.radius <= radius && vantage_point.left_child != nothing && distance - vantage_point.min_dist >= -radius
+        _find_nearest(vantage_point.left_child, query, n_neighbors, candidates, metric) 
+    end
+    if distance - vantage_point.radius > -radius && vantage_point.right_child != nothing && distance - vantage_point.max_dist <= radius
+        _find_nearest(vantage_point.right_child, query, n_neighbors, candidates, metric) 
+    end
+end
+
+function select!(a::AbstractVector, k::Integer, distances::Vector{Int})
     lo = 1
     hi = length(a)
     if k < lo || k > hi; error("k is out of bounds"); end
@@ -117,27 +132,28 @@ function select!(a::AbstractVector, k::Integer, comp)
 
         if lo == hi; return a[lo]; end
 
+        pivot = distances[rand(lo:hi)]
         i, j = lo, hi
-        pivot = a[rand(lo:hi)]
         while i < j
-            while comp(a[i], pivot) == -1; i += 1; end
-            while comp(a[j], pivot) == 1; j -= 1; end
-            if comp(a[i],  a[j]) == 0
+            while distances[i] < pivot; i += 1; end
+            while distances[j] > pivot; j -= 1; end
+            if distances[i] == distances[j]
                 i += 1
             elseif i < j
                 a[i], a[j] = a[j], a[i]
+                distances[i], distances[j] = distances[j], distances[i]
             end
         end
         pivot_ind = j
 
-        length = pivot_ind - lo + 1
-        if k == length
+        n = pivot_ind - lo + 1
+        if k == n
             return a[pivot_ind]
-        elseif k < length
+        elseif k < n
             hi = pivot_ind - 1
         else
             lo = pivot_ind + 1
-            k = k - length
+            k = k - n
         end
 
     end # while true...
