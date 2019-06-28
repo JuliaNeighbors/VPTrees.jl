@@ -1,8 +1,11 @@
 using BenchmarkTools
 using Random
-# using VPTrees
+using VPTrees
 
 Random.seed!(1)
+function hamming(a::Integer, b::Integer)
+    count_ones(xor(a, b))
+end
 randints = [rand(UInt) for _ in 1:10000]
 @benchmark VPTree(randints, hamming, Int)
 # BenchmarkTools.Trial: 

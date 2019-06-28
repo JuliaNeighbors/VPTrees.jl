@@ -24,12 +24,10 @@ function _depth(n)
 end
 
 """
-    Construct Vantage Point Tree with data type `InputType` and given metric with return type `MetricReturnType`.
+    VPTree(data::Vector{InputType}, metric::Function, MetricReturnType)
 
-    # Arguments
-    - `data:: Vector{T}`: The data to be stored in the Tree
-    - `metric:: Function`: A metric taking to parameters of type T and returning a distance with type `metricReturnType`.
-    - `metricReturnType:: DataType`: Return type of `metric`.
+Construct Vantage Point Tree with a vector of `data` and given metric function `metric` 
+with return type `MetricReturnType`.
 """
 struct VPTree{InputType, MetricReturnType}
     data::Vector{InputType}
@@ -52,34 +50,31 @@ function _construct_tree_rec!(data::Vector{Tuple{Int, InputType}}, metric, Metri
         return Node(data[1][1], data[1][2], zero(MetricReturnType), zero(MetricReturnType), zero(MetricReturnType), nothing, nothing)
     end
     i_vantage = rand(1:n_data)
-    rest = data[1:end .!= i_vantage]
-    i_middle = div(n_data - 1, 2) + 1
     vantage_point = data[i_vantage]
-    radius = metric(rest[i_middle][2], vantage_point[2])
+    rest = data[1:end .!= i_vantage]
     distances = [metric(d[2], vantage_point[2]) for d in rest]
+    i_middle = div(n_data - 1, 2) + 1
     select!(rest, i_middle, distances)
+
     left_rest = rest[1:i_middle]
     left_node = _construct_tree_rec!(left_rest, metric, MetricReturnType)
+    
     right_rest = rest[i_middle + 1:end]
     right_node = _construct_tree_rec!(right_rest, metric, MetricReturnType)
+    
     min_dist, max_dist = extrema(distances)
+    radius = metric(rest[i_middle][2], vantage_point[2])
+    
     Node{InputType, MetricReturnType}(vantage_point[1], vantage_point[2], radius,  min_dist, max_dist, left_node, right_node)
 end
 
 """
-    Efficiently compute hamming distance between the bits of two integer values.
-"""
-function hamming(a::Integer, b::Integer)
-    count_ones(xor(a, b))
-end
+    find(vptree::VPTree{InputType, MetricReturnType}, query::InputType, radius::MetricReturnType)::Vector{Int}
 
+Find all items in `vptree` within `radius` with respect to the metric defined in the VPTree.
+Returns Indices into VPTree.data.
 """
-    Find all items in `vptree` within `radius` with respect to the metric defined in the VPTree.
-    
-    # Returns
-    `Vector{Int}`: Indices into VPTree.data.
-"""
-function find(vptree::VPTree{InputType, MetricReturnType}, query::InputType, radius::MetricReturnType) where {InputType, MetricReturnType}
+function find(vptree::VPTree{InputType, MetricReturnType}, query::InputType, radius::MetricReturnType)::Vector{Int} where {InputType, MetricReturnType}
     results = Vector{Int}()
     _find(vptree.root, query, radius, results, vptree.metric)
     results
@@ -99,21 +94,21 @@ function _find(vantage_point, query, radius, results, metric)
 end
 
 """
-    Find `n_neighbors` items in `vptree` closest to `query` with respect to the metric defined in the VPTree.
-    
-    # Returns
-    `Vector{Int}`: Indices into VPTree.data.
+    find_nearest(vptree::VPTree{InputType, MetricReturnType}, query::InputType, n_neighbors::Int)::Vector{Int}
+
+Find `n_neighbors` items in `vptree` closest to `query` with respect to the metric defined in the VPTree.
+Returns Indices into VPTree.data.
 """
-function find_nearest(vptree::VPTree{T}, query::T, n_neighbors::Int) where T
+function find_nearest(vptree::VPTree{InputType, MetricReturnType}, query::InputType, n_neighbors::Int)::Vector{Int} where {InputType, MetricReturnType}
     @assert n_neighbors > 0 "Can't search for fewer than 1 neighbors"
-    candidates = DataStructures.BinaryMaxHeap{Tuple{Int,Int}}()
+    candidates = DataStructures.BinaryMaxHeap{Tuple{MetricReturnType, Int}}()
     _find_nearest(vptree.root, query, n_neighbors, candidates, vptree.metric)
     [t[2] for t in candidates.valtree]
 end
 
 function _find_nearest(vantage_point, query, n_neighbors, candidates, metric) 
     distance = metric(vantage_point.data, query)
-    radius = length(candidates) < n_neighbors ? typemax(Int) : DataStructures.top(candidates)[1]
+    radius = length(candidates) < n_neighbors ? typemax(typeof(vantage_point.radius)) : DataStructures.top(candidates)[1]
     if distance < radius
         push!(candidates, (distance, vantage_point.index))
         if length(candidates) > n_neighbors
@@ -129,7 +124,13 @@ function _find_nearest(vantage_point, query, n_neighbors, candidates, metric)
     end
 end
 
-function select!(a::AbstractVector, k::Integer, distances)
+"""
+    Uses distances to permute `a` and `distances` using
+    `distances` so that the kth-smallest element in `distances` is at index k and 
+    all smaller elements are at the left and all larger to the right.
+    Quickselect algorithm.
+"""
+function select!(a::AbstractVector, k::Integer, distances::Vector{MetricReturnType}) where MetricReturnType <: Number
     lo = 1
     hi = length(a)
     if k < lo || k > hi; error("k is out of bounds"); end

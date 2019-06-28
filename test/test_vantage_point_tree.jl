@@ -3,6 +3,10 @@ using VPTrees
 using Random
 using StringDistances
 
+function hamming(a::Integer, b::Integer)
+    count_ones(xor(a, b))
+end
+
 @testset "VPTree.jl" begin
     @testset "find in radius" begin
         Random.seed!(1)
@@ -56,12 +60,9 @@ using StringDistances
         data = [(1,2),(15,16)]
         metric = (a, b) -> sqrt(sum((a .- b).^2))
         vptree = VPTree(data, metric, Float64)
-        query=(3,3)
-        @test [1] == find(vptree, query, 3.)
+        @test [1] == find(vptree, (3,3), 3.)
         @test Set([1, 2]) == Set(find(vptree, (3,3), 100.))
-        data = [2,3,6]
-        vptree = VPTree(data, metric, Float64);
-        @test Set([d for d in data if (metric(d, 2)) <= 1]) == Set(data[find(vptree, 2, 1.)])
+        @test Set([(1,2)]) == Set(data[find_nearest(vptree, (2,2), 1)])
     end
 
     @testset "levenshtein distance" begin
