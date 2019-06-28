@@ -28,6 +28,30 @@ end
 
 Construct Vantage Point Tree with a vector of `data` and given metric function `metric` 
 with return type `MetricReturnType`.
+
+## Example:
+
+```julia
+using VPTrees
+using StringDistances
+
+data = ["bla", "blub", "asdf", ":assd", "ast", "baube"]
+metric = (a, b) -> evaluate(Levenshtein(),a,b)
+MetricReturnType = Int
+vptree = VPTree(data, metric, MetricReturnType)
+query = "blau"
+radius = 2
+data[find(vptree, query, radius)]
+# 2-element Array{String,1}:
+#  "bla" 
+#  "blub"
+n_neighbors = 3
+data[find_nearest(vptree, query, n_neighbors)]
+# 3-element Array{String,1}:
+#  "baube"
+#  "blub" 
+#  "bla"
+```
 """
 struct VPTree{InputType, MetricReturnType}
     data::Vector{InputType}
@@ -73,6 +97,24 @@ end
 
 Find all items in `vptree` within `radius` with respect to the metric defined in the VPTree.
 Returns Indices into VPTree.data.
+
+## Example
+
+```julia
+using VPTrees
+using StringDistances
+
+data = ["bla", "blub", "asdf", ":assd", "ast", "baube"]
+metric = (a, b) -> evaluate(Levenshtein(),a,b)
+MetricReturnType = Int
+vptree = VPTree(data, metric, MetricReturnType)
+query = "blau"
+radius = 2
+data[find(vptree, query, radius)]
+# 2-element Array{String,1}:
+#  "bla" 
+#  "blub"
+```
 """
 function find(vptree::VPTree{InputType, MetricReturnType}, query::InputType, radius::MetricReturnType)::Vector{Int} where {InputType, MetricReturnType}
     results = Vector{Int}()
@@ -98,6 +140,25 @@ end
 
 Find `n_neighbors` items in `vptree` closest to `query` with respect to the metric defined in the VPTree.
 Returns Indices into VPTree.data.
+
+## Example:
+
+```julia
+using VPTrees
+using StringDistances
+
+data = ["bla", "blub", "asdf", ":assd", "ast", "baube"]
+metric = (a, b) -> evaluate(Levenshtein(),a,b)
+MetricReturnType = Int
+vptree = VPTree(data, metric, MetricReturnType)
+query = "blau"
+n_neighbors = 3
+data[find_nearest(vptree, query, n_neighbors)]
+# 3-element Array{String,1}:
+#  "baube"
+#  "blub" 
+#  "bla"
+```
 """
 function find_nearest(vptree::VPTree{InputType, MetricReturnType}, query::InputType, n_neighbors::Int)::Vector{Int} where {InputType, MetricReturnType}
     @assert n_neighbors > 0 "Can't search for fewer than 1 neighbors"
