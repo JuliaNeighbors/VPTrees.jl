@@ -7,20 +7,20 @@ function hamming(a::Integer, b::Integer)
     count_ones(xor(a, b))
 end
 randints = [rand(UInt) for _ in 1:10000]
-@benchmark VPTree(randints, hamming, Int)
+@benchmark VPTree(randints, hamming)
 # BenchmarkTools.Trial: 
-#   memory estimate:  36.07 MiB
-#   allocs estimate:  83368
+#   memory estimate:  36.16 MiB
+#   allocs estimate:  96189
 #   --------------
-#   minimum time:     11.573 ms (11.58% GC)
-#   median time:      14.957 ms (30.30% GC)
-#   mean time:        14.883 ms (28.10% GC)
-#   maximum time:     71.537 ms (81.26% GC)
+#   minimum time:     14.749 ms (10.84% GC)
+#   median time:      17.335 ms (21.43% GC)
+#   mean time:        17.348 ms (20.07% GC)
+#   maximum time:     63.897 ms (73.87% GC)
 #   --------------
-#   samples:          336
+#   samples:          288
 #   evals/sample:     1
 randints = [rand(UInt) for _ in 1:40000]
-vptree = VPTree(randints, hamming, Int);
+vptree = VPTree(randints, hamming);
 query = rand(UInt)
 radius = 20
 @benchmark find(vptree, query, radius)
@@ -41,10 +41,10 @@ radius = 20
 #   memory estimate:  1.38 KiB
 #   allocs estimate:  9
 #   --------------
-#   minimum time:     342.551 μs (0.00% GC)
-#   median time:      371.987 μs (0.00% GC)
-#   mean time:        413.776 μs (0.00% GC)
-#   maximum time:     1.425 ms (0.00% GC)
+#   minimum time:     321.168 μs (0.00% GC)
+#   median time:      343.786 μs (0.00% GC)
+#   mean time:        360.818 μs (0.00% GC)
+#   maximum time:     1.245 ms (0.00% GC)
 #   --------------
 #   samples:          10000
 #   evals/sample:     1

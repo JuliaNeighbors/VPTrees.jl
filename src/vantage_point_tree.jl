@@ -58,7 +58,9 @@ struct VPTree{InputType, MetricReturnType}
     metric::Function
     root::Node{InputType, MetricReturnType}
     MetricReturnType::DataType
-    function VPTree(data::Vector{InputType}, metric::Function, MetricReturnType) where {InputType}
+    function VPTree(data::Vector{InputType}, metric::Function) where {InputType}
+        @assert length(data) > 0 "Input data must contain at least one point."
+        MetricReturnType = typeof(metric(data[1], data[1]))
         indexed_data = collect(enumerate(data))
         root = _construct_tree_rec!(indexed_data, metric, MetricReturnType)
         new{InputType, MetricReturnType}(data, metric, root, MetricReturnType)
