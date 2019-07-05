@@ -48,3 +48,16 @@ radius = 20
 #   --------------
 #   samples:          10000
 #   evals/sample:     1
+
+using StringDistances
+using Statistics
+
+metric(a::AbstractString, b::AbstractString) = evaluate(Levenshtein(), a,b)
+prefixes = readlines("resources/benchmark_data.csv")
+
+Random.seed!(2)
+t = VPTree(prefixes, metric)
+rng = Random.MersenneTwister(1)
+@benchmark find(t, prefixes[rand(rng, 1:length(prefixes))], 2)
+rng = Random.MersenneTwister(1)
+@benchmark findall(a -> metric(prefixes[rand(rng, 1:length(prefixes))], a) <= 2, prefixes)
