@@ -65,6 +65,12 @@ struct VPTree{InputType, MetricReturnType}
     end
 end
 
+function VPTree(data::Vector{T}, metric::Function, MetricReturnType) where T
+    VPTree(data, metric)
+end
+
+@deprecate VPTree(data::Vector, metric::Function, MetricReturnType::DataType) VPTree(data::Vector, metric::Function)
+
 function _construct_tree_rec!(data::Vector{Tuple{Int, InputType}}, metric, MetricReturnType) where InputType
     if isempty(data)
         return nothing
