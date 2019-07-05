@@ -26,8 +26,7 @@ end
 """
     VPTree(data::Vector{InputType}, metric::Function)
 
-Construct Vantage Point Tree with a vector of `data` and given metric function `metric` 
-with return type `MetricReturnType`.
+Construct Vantage Point Tree with a vector of `data` and given metric function `metric`.
 
 ## Example:
 
