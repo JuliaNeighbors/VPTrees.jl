@@ -181,11 +181,21 @@ function _find_nearest(vantage_point, query, n_neighbors, candidates, metric)
         end
     end
     # Switch radius to one side to prevent overflow.
-    if distance - vantage_point.radius <= radius && vantage_point.left_child != nothing && distance - vantage_point.min_dist >= -radius
-        _find_nearest(vantage_point.left_child, query, n_neighbors, candidates, metric) 
-    end
-    if distance - vantage_point.radius > -radius && vantage_point.right_child != nothing && distance - vantage_point.max_dist <= radius
-        _find_nearest(vantage_point.right_child, query, n_neighbors, candidates, metric) 
+    if distance < vantage_point.radius
+        # Switch radius to one side to prevent overflow.
+        if distance - vantage_point.radius <= radius && vantage_point.left_child != nothing && distance - vantage_point.min_dist >= -radius
+            _find_nearest(vantage_point.left_child, query, n_neighbors, candidates, metric) 
+        end
+        if distance - vantage_point.radius > -radius && vantage_point.right_child != nothing && distance - vantage_point.max_dist <= radius
+            _find_nearest(vantage_point.right_child, query, n_neighbors, candidates, metric) 
+        end
+    else
+        if distance - vantage_point.radius > -radius && vantage_point.right_child != nothing && distance - vantage_point.max_dist <= radius
+            _find_nearest(vantage_point.right_child, query, n_neighbors, candidates, metric) 
+        end
+        if distance - vantage_point.radius <= radius && vantage_point.left_child != nothing && distance - vantage_point.min_dist >= -radius
+            _find_nearest(vantage_point.left_child, query, n_neighbors, candidates, metric) 
+        end
     end
 end
 
