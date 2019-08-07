@@ -87,7 +87,7 @@ function _construct_tree_rec!(data::AbstractVector{Tuple{Int, InputType}}, metri
     select!(rest, i_middle, distances)
     
     left_rest = view(rest, 1:i_middle)
-    left_node = _construct_tree_rec!(left_rest, metric, MetricReturnType)
+    left_node = Threads.@spawn _construct_tree_rec!(left_rest, metric, MetricReturnType)
     
     right_rest = view(rest, i_middle + 1:length(rest))
     right_node = _construct_tree_rec!(right_rest, metric, MetricReturnType)
@@ -95,7 +95,7 @@ function _construct_tree_rec!(data::AbstractVector{Tuple{Int, InputType}}, metri
     min_dist, max_dist = extrema(distances)
     radius = metric(rest[i_middle][2], vantage_point[2])
     
-    Node{InputType, MetricReturnType}(vantage_point[1], vantage_point[2], radius,  min_dist, max_dist, left_node, right_node)
+    Node{InputType, MetricReturnType}(vantage_point[1], vantage_point[2], radius,  min_dist, max_dist, fetch(left_node), right_node)
 end
 
 """
