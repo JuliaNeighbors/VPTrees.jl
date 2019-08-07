@@ -1,5 +1,6 @@
 import Base.show
 import DataStructures
+import Random
 
 struct Node{InputType, MetricReturnType}
     index::Int
@@ -59,7 +60,7 @@ struct VPTree{InputType, MetricReturnType}
     function VPTree(data::Vector{InputType}, metric::Function) where {InputType}
         @assert length(data) > 0 "Input data must contain at least one point."
         MetricReturnType = typeof(metric(data[1], data[1]))
-        indexed_data = collect(enumerate(data))
+        indexed_data = Random.shuffle!(collect(enumerate(data)))
         root = _construct_tree_rec!(indexed_data, metric, MetricReturnType)
         new{InputType, MetricReturnType}(data, metric, root, MetricReturnType)
     end
@@ -71,7 +72,7 @@ end
 
 @deprecate VPTree(data::Vector, metric::Function, MetricReturnType::DataType) VPTree(data::Vector, metric::Function)
 
-function _construct_tree_rec!(data::Vector{Tuple{Int, InputType}}, metric, MetricReturnType) where InputType
+function _construct_tree_rec!(data::AbstractVector{Tuple{Int, InputType}}, metric, MetricReturnType) where InputType
     if isempty(data)
         return nothing
     end
@@ -79,17 +80,16 @@ function _construct_tree_rec!(data::Vector{Tuple{Int, InputType}}, metric, Metri
     if n_data == 1
         return Node(data[1][1], data[1][2], zero(MetricReturnType), zero(MetricReturnType), zero(MetricReturnType), nothing, nothing)
     end
-    i_vantage = rand(1:n_data)
-    vantage_point = data[i_vantage]
-    rest = data[1:end .!= i_vantage]
+    vantage_point = data[1]
+    rest = view(data, 2:length(data))
     distances = [metric(d[2], vantage_point[2]) for d in rest]
     i_middle = div(n_data - 1, 2) + 1
     select!(rest, i_middle, distances)
-
-    left_rest = rest[1:i_middle]
+    
+    left_rest = view(rest, 1:i_middle)
     left_node = _construct_tree_rec!(left_rest, metric, MetricReturnType)
     
-    right_rest = rest[i_middle + 1:end]
+    right_rest = view(rest, i_middle + 1:length(rest))
     right_node = _construct_tree_rec!(right_rest, metric, MetricReturnType)
     
     min_dist, max_dist = extrema(distances)
@@ -211,9 +211,6 @@ function select!(a::AbstractVector, k::Integer, distances::Vector{MetricReturnTy
     if k < lo || k > hi; error("k is out of bounds"); end
 
     while true
-
-        if lo == hi; return a[lo]; end
-
         pivot = distances[rand(lo:hi)]
         i, j = lo, hi
         while i < j
@@ -237,6 +234,5 @@ function select!(a::AbstractVector, k::Integer, distances::Vector{MetricReturnTy
             lo = pivot_ind + 1
             k = k - n
         end
-
-    end # while true...
+    end 
 end
