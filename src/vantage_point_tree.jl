@@ -17,7 +17,7 @@ function Base.show(io::IO, n::Node)
 end
 
 function _depth(n)
-    if n == nothing 
+    if n === nothing 
         0
     else
         1 + max(_depth(n.left_child), _depth(n.right_child))
