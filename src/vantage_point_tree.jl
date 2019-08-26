@@ -70,9 +70,11 @@ function VPTree(data::Vector{T}, metric::Function, MetricReturnType) where T
     VPTree(data, metric)
 end
 
+const SMALL_DATA = 100
+
 @deprecate VPTree(data::Vector, metric::Function, MetricReturnType::DataType) VPTree(data::Vector, metric::Function)
 
-function _construct_tree_rec!(data::AbstractVector{Tuple{Int, InputType}}, metric, MetricReturnType) where InputType
+function _construct_tree_rec!(data::AbstractVector{Tuple{Int, InputType}}, metric, MetricReturnType)::Union{Node{InputType, MetricReturnType}, Nothing} where InputType
     if isempty(data)
         return nothing
     end
@@ -84,18 +86,29 @@ function _construct_tree_rec!(data::AbstractVector{Tuple{Int, InputType}}, metri
     rest = view(data, 2:length(data))
     distances = [metric(d[2], vantage_point[2]) for d in rest]
     i_middle = div(n_data - 1, 2) + 1
-    select!(rest, i_middle, distances)
+    distance_order = sortperm(distances, alg=PartialQuickSort(i_middle))
+    permute!(rest, distance_order)
     
     left_rest = view(rest, 1:i_middle)
-    left_node = Threads.@spawn _construct_tree_rec!(left_rest, metric, MetricReturnType)
+    should_spawn = length(rest) > SMALL_DATA
+    left_node = nothing
+    if should_spawn
+        left_node = Threads.@spawn _construct_tree_rec!(left_rest, metric, MetricReturnType)
+    else
+        left_node =  _construct_tree_rec!(left_rest, metric, MetricReturnType)
+    end
     
     right_rest = view(rest, i_middle + 1:length(rest))
     right_node = _construct_tree_rec!(right_rest, metric, MetricReturnType)
     
     min_dist, max_dist = extrema(distances)
-    radius = metric(rest[i_middle][2], vantage_point[2])
+    radius = distances[distance_order[i_middle]]
     
-    Node{InputType, MetricReturnType}(vantage_point[1], vantage_point[2], radius,  min_dist, max_dist, fetch(left_node), right_node)
+    if should_spawn
+        Node{InputType, MetricReturnType}(vantage_point[1], vantage_point[2], radius,  min_dist, max_dist, fetch(left_node), right_node)
+    else
+        Node{InputType, MetricReturnType}(vantage_point[1], vantage_point[2], radius,  min_dist, max_dist, left_node, right_node)
+    end
 end
 
 """
@@ -197,42 +210,4 @@ function _find_nearest(vantage_point, query, n_neighbors, candidates, metric)
             _find_nearest(vantage_point.left_child, query, n_neighbors, candidates, metric) 
         end
     end
-end
-
-"""
-    Uses distances to permute `a` and `distances` using
-    `distances` so that the kth-smallest element in `distances` is at index k and 
-    all smaller elements are at the left and all larger to the right.
-    Quickselect algorithm.
-"""
-function select!(a::AbstractVector, k::Integer, distances::Vector{MetricReturnType}) where MetricReturnType <: Number
-    lo = 1
-    hi = length(a)
-    if k < lo || k > hi; error("k is out of bounds"); end
-
-    while true
-        pivot = distances[rand(lo:hi)]
-        i, j = lo, hi
-        while i < j
-            while distances[i] < pivot; i += 1; end
-            while distances[j] > pivot; j -= 1; end
-            if distances[i] == distances[j]
-                i += 1
-            elseif i < j
-                a[i], a[j] = a[j], a[i]
-                distances[i], distances[j] = distances[j], distances[i]
-            end
-        end
-        pivot_ind = j
-
-        n = pivot_ind - lo + 1
-        if k == n
-            return a[pivot_ind]
-        elseif k < n
-            hi = pivot_ind - 1
-        else
-            lo = pivot_ind + 1
-            k = k - n
-        end
-    end 
 end
