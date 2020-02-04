@@ -15,4 +15,4 @@ StringDistances = "88034a9c-02f8-509d-84a9-84ec65e18404"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "StringDistances",]
+test = ["Test", "StringDistances"]
