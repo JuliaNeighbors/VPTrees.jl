@@ -69,8 +69,8 @@ struct VPTree{InputType, MetricReturnType}
                 threaded = false
             end
         end
-        if isnothing(threaded) && VERSION >= v"1.3-DEV" && Threads.nthreads() > 1
-            threaded = true
+        if isnothing(threaded) 
+            threaded = VERSION >= v"1.3-DEV" && Threads.nthreads() > 1
         end
         @assert length(data) > 0 "Input data must contain at least one point."
         MetricReturnType = typeof(metric(data[1], data[1]))
