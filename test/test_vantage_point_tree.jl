@@ -41,15 +41,6 @@ end
         end
     end
 
-    @testset "quickselect" begin
-        Random.seed!(1)
-        a = [5,7,6,90,7,-1,3]
-        k = 4
-        distances = [abs(d + 5) for d in a]
-        VPTrees.select!(a, k, distances)
-        @test a[4] == 6
-    end
-
     @testset "euclidean distance" begin
         Random.seed!(1)
         data = [(1,2),(15,16)]
@@ -68,6 +59,18 @@ end
         query="blau"
         @test Set(["bla", "blub"]) == Set(data[find(vptree, query, 2)])
         @test Set(["bla", "blub", "baube"]) == Set(data[find_nearest(vptree, query, 3)])
+    end
+
+    @testset "Construct threaded and unthreaded" begin
+        Random.seed!(1)
+        data = [UInt(1), UInt(15)]
+        metric = hamming
+        vptree = VPTree(data, metric; threaded=true)
+        @test [1] == find(vptree, UInt(3), 1)
+        @test Set([1, 2]) == Set(find(vptree, UInt(3), 2))
+        vptree = VPTree(data, metric; threaded=false)
+        @test [1] == find(vptree, UInt(3), 1)
+        @test Set([1, 2]) == Set(find(vptree, UInt(3), 2))
     end
 end
 
