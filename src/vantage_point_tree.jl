@@ -14,15 +14,7 @@ struct Node{InputType, MetricReturnType}
 end
 
 function Base.show(io::IO, n::Node)
-    print("Node $(typeof(n).parameters[1]): $(n.data), index $(n.index) radius $(n.radius), depth $(_depth(n))")
-end
-
-function _depth(n)
-    if n === nothing 
-        0
-    else
-        1 + max(_depth(n.left_child), _depth(n.right_child))
-    end
+    print("Node $(typeof(n).parameters[1]): $(n.data), index $(n.index) radius $(n.radius)")
 end
 
 """
