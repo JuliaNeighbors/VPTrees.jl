@@ -14,8 +14,7 @@ using VPTrees
 using StringDistances
 
 data = ["bla", "blub", "asdf", ":assd", "ast", "baube"]
-metric = (a, b) -> evaluate(Levenshtein(),a,b)
-vptree = VPTree(data, metric)
+vptree = VPTree(data, Levenshtein()))
 query = "blau"
 radius = 2
 data[find(vptree, query, radius)]

@@ -8,6 +8,7 @@ struct Node{InputType, MetricReturnType}
     radius::MetricReturnType
     min_dist::MetricReturnType
     max_dist::MetricReturnType
+    n_data::Int
     left_child::Union{Node{InputType, MetricReturnType}, Nothing}
     right_child::Union{Node{InputType, MetricReturnType}, Nothing}
 end
@@ -25,9 +26,9 @@ function _depth(n)
 end
 
 """
-    VPTree(data::Vector{InputType}, metric::Function; threaded=false)
+    VPTree(data::Vector{InputType}, metric; threaded=false)
 
-Construct Vantage Point Tree with a vector of `data` and given metric function `metric`. 
+Construct Vantage Point Tree with a vector of `data` and given a callable `metric`. 
 `threaded` uses threading is only avaible in Julia 1.3+ to parallelize construction of the Tree.
 When not explicitly set, is set to true when the necessary conditions are met.
 
@@ -38,8 +39,7 @@ using VPTrees
 using StringDistances
 
 data = ["bla", "blub", "asdf", ":assd", "ast", "baube"]
-metric = (a, b) -> evaluate(Levenshtein(),a,b)
-vptree = VPTree(data, metric)
+vptree = VPTree(data, Levenshtein())
 query = "blau"
 radius = 2
 data[find(vptree, query, radius)]
@@ -56,37 +56,44 @@ data[find_nearest(vptree, query, n_neighbors)]
 """
 struct VPTree{InputType, MetricReturnType}
     data::Vector{InputType}
-    metric::Function
+    metric
     root::Node{InputType, MetricReturnType}
     MetricReturnType::DataType
-    function VPTree(data::Vector{InputType}, metric::Function; threaded=nothing) where InputType
-        if !isnothing(threaded) && threaded == true
-            if VERSION < v"1.3-DEV" 
-                @warn "incompatible julia version for `threaded=true`: $VERSION, requires >= v\"1.3\", setting `threaded=false`"
-                threaded = false
-            elseif Threads.nthreads() == 1
-                @warn "`threaded = true`, but `Threads.nthreads() == 1`, setting `threaded=false`"
-                threaded = false
-            end
-        end
-        if isnothing(threaded) 
-            threaded = VERSION >= v"1.3-DEV" && Threads.nthreads() > 1
-        end
+    threaded::Bool
+    function VPTree(data::Vector{InputType}, metric; threaded=nothing) where InputType
+        threaded = _check_threaded(threaded)
         @assert length(data) > 0 "Input data must contain at least one point."
+        @assert !isempty(methods(metric)) "`metric` must be callable, was: $(metric)"
         MetricReturnType = typeof(metric(data[1], data[1]))
         indexed_data = Random.shuffle!(collect(enumerate(data)))
         root = threaded ? _construct_tree_rec_threaded!(indexed_data, metric, MetricReturnType) : _construct_tree_rec!(indexed_data, metric, MetricReturnType)
-        new{InputType, MetricReturnType}(data, metric, root, MetricReturnType)
+        new{InputType, MetricReturnType}(data, metric, root, MetricReturnType, threaded)
     end
+end
+
+function _check_threaded(threaded)
+    if !isnothing(threaded) && threaded == true
+        if VERSION < v"1.3-DEV" 
+            @warn "incompatible julia version for `threaded=true`: $VERSION, requires >= v\"1.3\", setting `threaded=false`"
+            threaded = false
+        elseif Threads.nthreads() == 1
+            @warn "`threaded = true`, but `Threads.nthreads() == 1`, setting `threaded=false`"
+            threaded = false
+        end
+    end
+    if isnothing(threaded) 
+        threaded = VERSION >= v"1.3-DEV" && Threads.nthreads() > 1
+    end
+    threaded
 end
 
 function VPTree(data::Vector{T}, metric::Function, MetricReturnType) where T
     VPTree(data, metric)
 end
 
-const SMALL_DATA = 100
+const SMALL_DATA = 1000
 
-@deprecate VPTree(data::Vector, metric::Function, MetricReturnType::DataType) VPTree(data::Vector, metric::Function)
+@deprecate VPTree(data::Vector, metric::Function, MetricReturnType::DataType) VPTree(data::Vector, metric)
 
 function _construct_tree_rec_threaded!(data::AbstractVector{Tuple{Int, InputType}}, metric, MetricReturnType) where InputType
     if isempty(data)
@@ -94,7 +101,7 @@ function _construct_tree_rec_threaded!(data::AbstractVector{Tuple{Int, InputType
     end
     n_data = length(data)
     if n_data == 1
-        return Node(data[1][1], data[1][2], zero(MetricReturnType), zero(MetricReturnType), zero(MetricReturnType), nothing, nothing)
+        return Node(data[1][1], data[1][2], zero(MetricReturnType), zero(MetricReturnType), zero(MetricReturnType), n_data, nothing, nothing)
     end
     vantage_point = data[1]
     rest = view(data, 2:length(data))
@@ -118,9 +125,9 @@ function _construct_tree_rec_threaded!(data::AbstractVector{Tuple{Int, InputType
     right_node = _construct_tree_rec_threaded!(right_rest, metric, MetricReturnType)
     
     if should_spawn
-        Node{InputType, MetricReturnType}(vantage_point[1], vantage_point[2], radius,  min_dist, max_dist, fetch(left_node), right_node)
+        Node{InputType, MetricReturnType}(vantage_point[1], vantage_point[2], radius,  min_dist, max_dist, n_data, fetch(left_node), right_node)
     else
-        Node{InputType, MetricReturnType}(vantage_point[1], vantage_point[2], radius,  min_dist, max_dist, left_node, right_node)
+        Node{InputType, MetricReturnType}(vantage_point[1], vantage_point[2], radius,  min_dist, max_dist, n_data, left_node, right_node)
     end
 end
 
@@ -130,7 +137,7 @@ function _construct_tree_rec!(data::AbstractVector{Tuple{Int, InputType}}, metri
     end
     n_data = length(data)
     if n_data == 1
-        return Node(data[1][1], data[1][2], zero(MetricReturnType), zero(MetricReturnType), zero(MetricReturnType), nothing, nothing)
+        return Node(data[1][1], data[1][2], zero(MetricReturnType), zero(MetricReturnType), zero(MetricReturnType), n_data, nothing, nothing)
     end
     vantage_point = data[1]
     rest = view(data, 2:length(data))
@@ -149,7 +156,7 @@ function _construct_tree_rec!(data::AbstractVector{Tuple{Int, InputType}}, metri
     min_dist, max_dist = extrema(distances)
     radius = distances[distance_order[i_middle]]
     
-    Node{InputType, MetricReturnType}(vantage_point[1], vantage_point[2], radius,  min_dist, max_dist, left_node, right_node)
+    Node{InputType, MetricReturnType}(vantage_point[1], vantage_point[2], radius,  min_dist, max_dist, n_data, left_node, right_node)
 end
 
 """
@@ -176,9 +183,15 @@ data[find(vptree, query, radius)]
 ```
 """
 function find(vptree::VPTree{InputType, MetricReturnType}, query::InputType, radius::MetricReturnType)::Vector{Int} where {InputType, MetricReturnType}
-    results = Vector{Int}()
-    _find(vptree.root, query, radius, results, vptree.metric)
-    results
+    if vptree.threaded
+        results_threads = [Vector{Int}() for i in 1:Threads.nthreads()]
+        _find_threaded(vptree.root, query, radius, results_threads, vptree.metric) 
+        return reduce(vcat, results_threads)
+    else
+        results = Vector{Int}()
+        _find(vptree.root, query, radius, results, vptree.metric)
+        return results
+    end
 end
 
 function _find(vantage_point, query, radius, results, metric) 
@@ -191,6 +204,27 @@ function _find(vantage_point, query, radius, results, metric)
     end
     if distance + radius > vantage_point.radius && !isnothing(vantage_point.right_child) && distance - radius <= vantage_point.max_dist
         _find(vantage_point.right_child, query, radius, results, metric)
+    end
+end
+
+function _find_threaded(vantage_point, query, radius, results, metric) 
+    distance = metric(vantage_point.data, query)
+    if distance <= radius
+        push!(results[Threads.threadid()], vantage_point.index)
+    end
+    goleft = distance + radius > vantage_point.radius && !isnothing(vantage_point.right_child) && distance - radius <= vantage_point.max_dist
+    if distance - radius <= vantage_point.radius && !isnothing(vantage_point.left_child) && distance + radius >= vantage_point.min_dist
+        if goleft && vantage_point.n_data > SMALL_DATA
+            r = Threads.@spawn _find_threaded(vantage_point.left_child, query, radius, results, metric)
+        else
+            _find_threaded(vantage_point.left_child, query, radius, results, metric)
+        end
+    end
+    if goleft
+        _find_threaded(vantage_point.right_child, query, radius, results, metric)
+    end
+    if @isdefined r
+        wait(r)
     end
 end
 
