@@ -61,6 +61,16 @@ end
         @test Set(["bla", "blub", "baube"]) == Set(data[find_nearest(vptree, query, 3)])
     end
 
+    @testset "callable" begin
+        Random.seed!(1)
+        data = ["bla", "blub", "asdf", ":assd", "ast", "baube"]
+        vptree = VPTree(data, Levenshtein())
+        query="blau"
+        @test Set(["bla", "blub"]) == Set(data[find(vptree, query, 2)])
+        @test Set(["bla", "blub", "baube"]) == Set(data[find_nearest(vptree, query, 3)])
+        @test_throws AssertionError VPTree(data, 1)
+    end
+
     @testset "Construct threaded and unthreaded" begin
         Random.seed!(1)
         data = [UInt(1), UInt(15)]
