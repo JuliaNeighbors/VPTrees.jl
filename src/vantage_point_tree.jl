@@ -194,7 +194,7 @@ function _find(vantage_point, query, radius, results, metric)
     if distance - radius <= vantage_point.radius && !isnothing(vantage_point.left_child) && distance + radius >= vantage_point.min_dist
         _find(vantage_point.left_child, query, radius, results, metric)
     end
-    if distance + radius > vantage_point.radius && !isnothing(vantage_point.right_child) && distance - radius <= vantage_point.max_dist
+    if distance + radius >= vantage_point.radius && !isnothing(vantage_point.right_child) && distance - radius <= vantage_point.max_dist
         _find(vantage_point.right_child, query, radius, results, metric)
     end
 end
@@ -204,7 +204,7 @@ function _find_threaded(vantage_point, query, radius, results, metric)
     if distance <= radius
         push!(results[Threads.threadid()], vantage_point.index)
     end
-    goleft = distance + radius > vantage_point.radius && !isnothing(vantage_point.right_child) && distance - radius <= vantage_point.max_dist
+    goleft = distance + radius >= vantage_point.radius && !isnothing(vantage_point.right_child) && distance - radius <= vantage_point.max_dist
     if distance - radius <= vantage_point.radius && !isnothing(vantage_point.left_child) && distance + radius >= vantage_point.min_dist
         if goleft && vantage_point.n_data > SMALL_DATA
             r = Threads.@spawn _find_threaded(vantage_point.left_child, query, radius, results, metric)
