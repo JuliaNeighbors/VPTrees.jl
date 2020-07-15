@@ -1,7 +1,7 @@
-using Documenter, SkillRating
+using Documenter, VPTrees
 
 makedocs(;
-    modules=[SkillRating],
+    modules=[VPTrees],
     format=Documenter.HTML(),
     pages=[
         "Home" => "index.md",
