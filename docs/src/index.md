@@ -4,7 +4,7 @@ Implementation of Vantage Point Trees in Julia.
 A Vantage Point Tree is a metric tree which can be used for nearest neighbor or radius searches in any metric space.
 See [Data structures and algorithms for nearest neighbor search in general metric spaces](http://web.cs.iastate.edu/~honavar/nndatastructures.pdf).
 
-## Example:
+### Example:
 ```julia
 using VPTrees
 using StringDistances
@@ -25,12 +25,12 @@ data[find_nearest(vptree, query, n_neighbors)]
 #  "bla"
 ```
 
-## Related Packages
+### Related Packages
 The following packages implement other data structures for use in nearest neighbor and radius search in metric space:
 - [BKTrees.jl](https://github.com/zgornel/BKTrees.jl)
 - [NearestNeighbors.jl](https://github.com/KristofferC/NearestNeighbors.jl) implementing Ball Trees
 
-
+### API
 ```@index
 ```
 
