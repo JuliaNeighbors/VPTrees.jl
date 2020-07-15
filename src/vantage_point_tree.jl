@@ -18,7 +18,7 @@ function Base.show(io::IO, n::Node)
 end
 
 """
-    VPTree(data::Vector{InputType}, metric; threaded=false)
+    VPTree(data::Vector{InputType}, metric; threaded=nothing)
 
 Construct Vantage Point Tree with a vector of `data` and given a callable `metric`. 
 `threaded` uses threading is only avaible in Julia 1.3+ to parallelize construction of the Tree.
