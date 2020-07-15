@@ -152,10 +152,11 @@ function _construct_tree_rec!(data::AbstractVector{Tuple{Int, InputType}}, metri
 end
 
 """
-    find(vptree::VPTree{InputType, MetricReturnType}, query::InputType, radius::MetricReturnType)::Vector{Int}
+    find(vptree::VPTree{InputType, MetricReturnType}, query::InputType, radius::MetricReturnType, skip=nothing)::Vector{Int}
 
-Find all items in `vptree` within `radius` with respect to the metric defined in the VPTree.
-Returns Indices into VPTree.data.
+Find all items in `vptree` within `radius` of `query` with respect to the metric defined in the VPTree.
+Returns indices into VPTree.data. The optional `skip` argument is a function `f(::Int)::Bool` which can
+be used to omit points in the tree from the search based on their index.
 
 ## Example
 
@@ -174,34 +175,34 @@ data[find(vptree, query, radius)]
 #  "blub"
 ```
 """
-function find(vptree::VPTree{InputType, MetricReturnType}, query::InputType, radius::MetricReturnType)::Vector{Int} where {InputType, MetricReturnType}
+function find(vptree::VPTree{InputType, MetricReturnType}, query::InputType, radius::MetricReturnType, skip=nothing)::Vector{Int} where {InputType, MetricReturnType}
     if vptree.threaded
         results_threads = [Vector{Int}() for i in 1:Threads.nthreads()]
-        _find_threaded(vptree.root, query, radius, results_threads, vptree.metric) 
+        _find_threaded(vptree.root, query, radius, results_threads, vptree.metric, skip)
         return reduce(vcat, results_threads)
     else
         results = Vector{Int}()
-        _find(vptree.root, query, radius, results, vptree.metric)
+        _find(vptree.root, query, radius, results, vptree.metric, skip)
         return results
     end
 end
 
-function _find(vantage_point, query, radius, results, metric) 
+function _find(vantage_point, query, radius, results, metric, skip)
     distance = metric(vantage_point.data, query)
-    if distance <= radius
+    if distance <= radius && (isnothing(skip) || !skip(vantage_point.index))
         push!(results, vantage_point.index)
     end
     if distance - radius <= vantage_point.radius && !isnothing(vantage_point.left_child) && distance + radius >= vantage_point.min_dist
-        _find(vantage_point.left_child, query, radius, results, metric)
+        _find(vantage_point.left_child, query, radius, results, metric, skip)
     end
     if distance + radius >= vantage_point.radius && !isnothing(vantage_point.right_child) && distance - radius <= vantage_point.max_dist
-        _find(vantage_point.right_child, query, radius, results, metric)
+        _find(vantage_point.right_child, query, radius, results, metric, skip)
     end
 end
 
-function _find_threaded(vantage_point, query, radius, results, metric) 
+function _find_threaded(vantage_point, query, radius, results, metric, skip)
     distance = metric(vantage_point.data, query)
-    if distance <= radius
+    if distance <= radius && (isnothing(skip) || !skip(vantage_point.index))
         push!(results[Threads.threadid()], vantage_point.index)
     end
     goleft = distance + radius >= vantage_point.radius && !isnothing(vantage_point.right_child) && distance - radius <= vantage_point.max_dist
@@ -209,11 +210,11 @@ function _find_threaded(vantage_point, query, radius, results, metric)
         if goleft && vantage_point.n_data > SMALL_DATA
             r = Threads.@spawn _find_threaded(vantage_point.left_child, query, radius, results, metric)
         else
-            _find_threaded(vantage_point.left_child, query, radius, results, metric)
+            _find_threaded(vantage_point.left_child, query, radius, results, metric, skip)
         end
     end
     if goleft
-        _find_threaded(vantage_point.right_child, query, radius, results, metric)
+        _find_threaded(vantage_point.right_child, query, radius, results, metric, skip)
     end
     if @isdefined r
         wait(r)
@@ -221,10 +222,11 @@ function _find_threaded(vantage_point, query, radius, results, metric)
 end
 
 """
-    find_nearest(vptree::VPTree{InputType, MetricReturnType}, query::InputType, n_neighbors::Int)::Vector{Int}
+    find_nearest(vptree::VPTree{InputType, MetricReturnType}, query::InputType, n_neighbors::Int, skip=nothing)::Vector{Int}
 
 Find `n_neighbors` items in `vptree` closest to `query` with respect to the metric defined in the VPTree.
-Returns Indices into VPTree.data.
+Returns indices into VPTree.data. The optional `skip` argument is a function `f(::Int)::Bool` which can
+be used to omit points in the tree from the search based on their index.
 
 ## Example:
 
@@ -240,21 +242,21 @@ n_neighbors = 3
 data[find_nearest(vptree, query, n_neighbors)]
 # 3-element Array{String,1}:
 #  "baube"
-#  "blub" 
+#  "blub"
 #  "bla"
 ```
 """
-function find_nearest(vptree::VPTree{InputType, MetricReturnType}, query::InputType, n_neighbors::Int)::Vector{Int} where {InputType, MetricReturnType}
+function find_nearest(vptree::VPTree{InputType, MetricReturnType}, query::InputType, n_neighbors::Int, skip=nothing)::Vector{Int} where {InputType, MetricReturnType}
     @assert n_neighbors > 0 "Can't search for fewer than 1 neighbors"
     candidates = DataStructures.BinaryMaxHeap{Tuple{MetricReturnType, Int}}()
-    _find_nearest(vptree.root, query, n_neighbors, candidates, vptree.metric)
+    _find_nearest(vptree.root, query, n_neighbors, candidates, vptree.metric, skip)
     [t[2] for t in candidates.valtree]
 end
 
-function _find_nearest(vantage_point, query, n_neighbors, candidates, metric) 
+function _find_nearest(vantage_point, query, n_neighbors, candidates, metric, skip)
     distance = metric(vantage_point.data, query)
     radius = length(candidates) < n_neighbors ? typemax(typeof(vantage_point.radius)) : DataStructures.top(candidates)[1]
-    if distance < radius
+    if distance < radius && (isnothing(skip) || !skip(vantage_point.index))
         push!(candidates, (distance, vantage_point.index))
         if length(candidates) > n_neighbors
             pop!(candidates)
@@ -264,17 +266,17 @@ function _find_nearest(vantage_point, query, n_neighbors, candidates, metric)
     if distance < vantage_point.radius
         # Switch radius to one side to prevent overflow.
         if distance - vantage_point.radius <= radius && !isnothing(vantage_point.left_child) && distance - vantage_point.min_dist >= -radius
-            _find_nearest(vantage_point.left_child, query, n_neighbors, candidates, metric) 
+            _find_nearest(vantage_point.left_child, query, n_neighbors, candidates, metric, skip)
         end
         if distance - vantage_point.radius > -radius && !isnothing(vantage_point.right_child) && distance - vantage_point.max_dist <= radius
-            _find_nearest(vantage_point.right_child, query, n_neighbors, candidates, metric) 
+            _find_nearest(vantage_point.right_child, query, n_neighbors, candidates, metric, skip)
         end
     else
         if distance - vantage_point.radius > -radius && !isnothing(vantage_point.right_child) && distance - vantage_point.max_dist <= radius
-            _find_nearest(vantage_point.right_child, query, n_neighbors, candidates, metric) 
+            _find_nearest(vantage_point.right_child, query, n_neighbors, candidates, metric, skip)
         end
         if distance - vantage_point.radius <= radius && !isnothing(vantage_point.left_child) && distance - vantage_point.min_dist >= -radius
-            _find_nearest(vantage_point.left_child, query, n_neighbors, candidates, metric) 
+            _find_nearest(vantage_point.left_child, query, n_neighbors, candidates, metric, skip)
         end
     end
 end
