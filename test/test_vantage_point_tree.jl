@@ -156,17 +156,20 @@ end
     Random.seed!(1)
 
     metric = hamming
-    data = UInt8.(0:255)
-    vptree = VPTree(data, metric)
+    data = collect(0x0000:0xFFFF)
 
-    queries = UInt8[0, 1, 15, 107, 255]
-    k = 10
-    r = 2
+    queries = [0x0000, 0x0001, 0x4eaf, 0xa44a, 0xFFFF]
+    k = 50
+    r = 5
 
-    for query in queries
-        for skip in [nothing, skip3]
-            test_find(vptree, query, r, skip)
-            test_find_nearest(vptree, query, k, skip)
+    for threaded in [false, true]
+        vptree = VPTree(data, metric, threaded=threaded)
+
+        for query in queries
+            for skip in [nothing, skip3]
+                test_find(vptree, query, r, skip)
+                test_find_nearest(vptree, query, k, skip)
+            end
         end
     end
 end
@@ -175,17 +178,20 @@ end
     Random.seed!(1)
 
     metric = euclidean
-    data = [rand(2) for _ in 1:1000]
-    vptree = VPTree(data, metric)
+    data = [rand(2) for _ in 1:10000]
 
     queries = [rand(2) for _ in 1:10]
-    k = 20
+    k = 50
     r = .25
 
-    for query in queries
-        for skip in [nothing, skip3]
-            test_find(vptree, query, r, skip)
-            test_find_nearest(vptree, query, k, skip)
+    for threaded in [false, true]
+        vptree = VPTree(data, metric)
+
+        for query in queries
+            for skip in [nothing, skip3]
+                test_find(vptree, query, r, skip)
+                test_find_nearest(vptree, query, k, skip)
+            end
         end
     end
 end
@@ -194,40 +200,27 @@ end
     Random.seed!(1)
 
     queries = ["bla", "blub", "asdf", ":assd", "ast", "baube"]
-    alphabet = union(queries...)
+    alphabet = union(queries..., "xyz")
 
     metric = Levenshtein()
-    data = [randstring(alphabet, rand(3:5)) for _ in 1:100]
-    vptree = VPTree(data, metric)
+    data = unique(randstring(alphabet, rand(3:5)) for _ in 1:10000)
 
     k = 10
     r = 3
 
-    for query in queries
-        for skip in [nothing, skip3]
-            test_find(vptree, query, r, skip)
-            test_find_nearest(vptree, query, k, skip)
+    for threaded in [false, true]
+        vptree = VPTree(data, metric)
+
+        for query in queries
+            for skip in [nothing, skip3]
+                test_find(vptree, query, r, skip)
+                test_find_nearest(vptree, query, k, skip)
+            end
         end
     end
 end
 
-@testset "Construct threaded and unthreaded" begin
-    Random.seed!(1)
-
-    data = [UInt(1), UInt(15)]
-    metric = hamming
-
-    vptree = VPTree(data, metric; threaded=true)
-    @test [1] == find(vptree, UInt(3), 1)
-    @test issetequal([1, 2], find(vptree, UInt(3), 2))
-
-    vptree = VPTree(data, metric; threaded=false)
-    @test [1] == find(vptree, UInt(3), 1)
-    @test issetequal([1, 2], find(vptree, UInt(3), 2))
-end
-
 @testset "Construct invalid" begin
-    Random.seed!(1)
 
     # Empty data set
     @test_throws AssertionError VPTree(Vector{Float64}[], euclidean)
