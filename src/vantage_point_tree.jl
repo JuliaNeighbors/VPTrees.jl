@@ -208,7 +208,7 @@ function _find_threaded(vantage_point, query, radius, results, metric, skip)
     goleft = distance + radius >= vantage_point.radius && !isnothing(vantage_point.right_child) && distance - radius <= vantage_point.max_dist
     if distance - radius <= vantage_point.radius && !isnothing(vantage_point.left_child) && distance + radius >= vantage_point.min_dist
         if goleft && vantage_point.n_data > SMALL_DATA
-            r = Threads.@spawn _find_threaded(vantage_point.left_child, query, radius, results, metric)
+            r = Threads.@spawn _find_threaded(vantage_point.left_child, query, radius, results, metric, skip)
         else
             _find_threaded(vantage_point.left_child, query, radius, results, metric, skip)
         end
