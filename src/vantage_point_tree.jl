@@ -20,7 +20,7 @@ end
 """
     VPTree(data::Vector{InputType}, metric; threaded=nothing)
 
-Construct Vantage Point Tree with a vector of `data` and given a callable `metric`. 
+Construct Vantage Point Tree with a vector of `data` and given a callable `metric`.
 `threaded` uses threading is only avaible in Julia 1.3+ to parallelize construction of the Tree.
 When not explicitly set, is set to true when the necessary conditions are met.
 
@@ -36,13 +36,13 @@ query = "blau"
 radius = 2
 data[find(vptree, query, radius)]
 # 2-element Array{String,1}:
-#  "bla" 
+#  "bla"
 #  "blub"
 n_neighbors = 3
 data[find_nearest(vptree, query, n_neighbors)]
 # 3-element Array{String,1}:
 #  "baube"
-#  "blub" 
+#  "blub"
 #  "bla"
 ```
 """
@@ -65,7 +65,7 @@ end
 
 function _check_threaded(threaded)
     if !isnothing(threaded) && threaded == true
-        if VERSION < v"1.3-DEV" 
+        if VERSION < v"1.3-DEV"
             @warn "incompatible julia version for `threaded=true`: $VERSION, requires >= v\"1.3\", setting `threaded=false`"
             threaded = false
         elseif Threads.nthreads() == 1
@@ -73,7 +73,7 @@ function _check_threaded(threaded)
             threaded = false
         end
     end
-    if isnothing(threaded) 
+    if isnothing(threaded)
         threaded = VERSION >= v"1.3-DEV" && Threads.nthreads() > 1
     end
     threaded
@@ -105,17 +105,17 @@ function _construct_tree_rec_threaded!(data::AbstractVector{Tuple{Int, InputType
     min_dist, max_dist = extrema(distances)
     radius = distances[distance_order[i_middle]]
     left_rest = view(rest, 1:i_middle)
-    
+
     should_spawn = length(rest) > SMALL_DATA
     left_node = if should_spawn
         Threads.@spawn _construct_tree_rec_threaded!(left_rest, metric, MetricReturnType)
     else
         _construct_tree_rec!(left_rest, metric, MetricReturnType)
     end
-    
+
     right_rest = view(rest, i_middle + 1:length(rest))
     right_node = _construct_tree_rec_threaded!(right_rest, metric, MetricReturnType)
-    
+
     if should_spawn
         Node{InputType, MetricReturnType}(vantage_point[1], vantage_point[2], radius,  min_dist, max_dist, n_data, fetch(left_node), right_node)
     else
@@ -137,17 +137,17 @@ function _construct_tree_rec!(data::AbstractVector{Tuple{Int, InputType}}, metri
     i_middle = div(n_data - 1, 2) + 1
     distance_order = sortperm(distances, alg=PartialQuickSort(i_middle))
     permute!(rest, distance_order)
-    
+
     left_rest = view(rest, 1:i_middle)
-    
+
     left_node = _construct_tree_rec!(left_rest, metric, MetricReturnType)
-    
+
     right_rest = view(rest, i_middle + 1:length(rest))
     right_node = _construct_tree_rec!(right_rest, metric, MetricReturnType)
-    
+
     min_dist, max_dist = extrema(distances)
     radius = distances[distance_order[i_middle]]
-    
+
     Node{InputType, MetricReturnType}(vantage_point[1], vantage_point[2], radius,  min_dist, max_dist, n_data, left_node, right_node)
 end
 
@@ -171,7 +171,7 @@ query = "blau"
 radius = 2
 data[find(vptree, query, radius)]
 # 2-element Array{String,1}:
-#  "bla" 
+#  "bla"
 #  "blub"
 ```
 """
