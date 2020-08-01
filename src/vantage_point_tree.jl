@@ -50,7 +50,6 @@ struct VPTree{InputType, MetricReturnType}
     data::Vector{InputType}
     metric
     root::Node{InputType, MetricReturnType}
-    MetricReturnType::DataType
     threaded::Bool
     function VPTree(data::Vector{InputType}, metric; threaded=nothing) where InputType
         threaded = _check_threaded(threaded)
@@ -59,7 +58,7 @@ struct VPTree{InputType, MetricReturnType}
         MetricReturnType = typeof(metric(data[1], data[1]))
         indexed_data = Random.shuffle!(collect(enumerate(data)))
         root = threaded ? _construct_tree_rec_threaded!(indexed_data, metric, MetricReturnType) : _construct_tree_rec!(indexed_data, metric, MetricReturnType)
-        new{InputType, MetricReturnType}(data, metric, root, MetricReturnType, threaded)
+        new{InputType, MetricReturnType}(data, metric, root, threaded)
     end
 end
 
