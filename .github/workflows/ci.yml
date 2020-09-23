@@ -27,6 +27,7 @@ jobs:
             allow-failure: true
           - version: 'nightly'
             os: windows-latest
+            arch: x64
             allow-failure: true
           - version: 'nightly'
             os: macOS-latest
