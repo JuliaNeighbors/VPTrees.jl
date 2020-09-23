@@ -254,7 +254,7 @@ end
 
 function _find_nearest(vantage_point, query, n_neighbors, candidates, metric, skip)
     distance = metric(vantage_point.data, query)
-    radius = length(candidates) < n_neighbors ? typemax(typeof(vantage_point.radius)) : DataStructures.top(candidates)[1]
+    radius = length(candidates) < n_neighbors ? typemax(typeof(vantage_point.radius)) : first(candidates)[1]
     if distance < radius && (isnothing(skip) || !skip(vantage_point.index))
         push!(candidates, (distance, vantage_point.index))
         if length(candidates) > n_neighbors
